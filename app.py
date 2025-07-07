@@ -12,7 +12,7 @@ import pytz
 import json
 import uuid
 
-load_dotenv(".env")
+load_dotenv()
 
 creds_dict = {
     "type": os.getenv("GOOGLE_CREDENTIALS_TYPE"),
@@ -37,6 +37,7 @@ reflected_cn = "C032B89UK36"
 piket_reflected_cn = "C056S606NGM"
 helpdesk_cn = "C081NA747D0"
 helpdesk_support_id = "U08NTAUVD2P"
+testing_cn = "C0719R3NQ91"
 
 greetings_response = {
     "morning": "Good Morning",
@@ -317,7 +318,7 @@ def handle_message_events(body, say, client):
                 response = greetings_response[greeting]
                 say(f"{response} <@{event['user']}>, Pepe is ready to help :frog:")
                 say(
-                    f"Please type your issue with the following pattern: `/opsdev [write your issue/inquiry]`"
+                    f"Please type your issue with the following pattern: `/hiops [write your issue/inquiry]`"
                 )
         elif match_thank_you:
             thank_you = match_thank_you.group(1)
@@ -327,7 +328,7 @@ def handle_message_events(body, say, client):
         else:
             say(f"Hi <@{event['user']}>, Pepe is ready to help :frog:")
             say(
-                f"Please type your issue with this following pattern: `/opsdev [write your issue/inquiry]`"
+                f"Please type your issue with this following pattern: `/hiops [write your issue/inquiry]`"
             )
         sheet_manager.log_ticket(
             chat_timestamp,
@@ -345,7 +346,7 @@ def handle_message_events(body, say, client):
 @app.command("/hiops")
 def slash_input(ack, body, client):
     ack()
-    categories = ["Piket", "Emergency", "IT Helpdesk", "Others"]
+    categories = ["Piket", "Emergency", "IT Helpdesk", "Kakak Siaga", "Others"]
     user_input = body.get("text", "No message provided.")
     category_options = [
         {
@@ -478,6 +479,7 @@ def handling_replacement(ack, body, client):
 @app.action("handle_category_selection")
 @app.action("button_Others")
 @app.action("button_IT Helpdesk")
+@app.action("button_Kakak Siaga")
 def handle_category_selection(ack, body, client):
     ack()
     [channel_id, user_input] = body["view"]["private_metadata"].split("@@")
@@ -762,24 +764,57 @@ def handle_category_selection(ack, body, client):
                 },
             },
         ]
+    elif selected_category == "Kakak Siaga":
+        modal_blocks = [
+            {
+                "type": "section",
+                "block_id": "bantuan_block",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Apakah sudah diarahkan tombol Bantuan?*",
+                },
+                "accessory": {
+                    "type": "radio_buttons",
+                    "action_id": "kakak_siaga_bantuan_radio",
+                    "options": [
+                        {"text": {"type": "plain_text", "text": "Yes"}, "value": "Yes"},
+                        {"text": {"type": "plain_text", "text": "No"}, "value": "No"},
+                    ],
+                },
+            }
+        ]
 
-    modal_title = (
-        "Submit a Helpdesk Ticket"
-        if selected_category == "IT Helpdesk"
-        else "Think Wisely!"
-    )
-    updated_modal = {
-        "type": "modal",
-        "callback_id": "slash_input",
-        "title": {
-            "type": "plain_text",
-            "text": modal_title,
-        },
-        "submit": {"type": "plain_text", "text": "Submit"},
-        "close": {"type": "plain_text", "text": "Cancel"},
-        "blocks": modal_blocks,
-        "private_metadata": f"{channel_id}@@{selected_category}",
+    modal_titles = {
+        "IT Helpdesk": "Submit a Helpdesk Ticket",
+        "Kakak Siaga": "Kakak Siaga Assistance"
     }
+
+    modal_title = modal_titles.get(selected_category, "Think Wisely!")
+
+    if selected_category == "Kakak Siaga":
+        updated_modal = {
+            "type": "modal",
+            "callback_id": "slash_input",
+            "title": {
+                "type": "plain_text",
+                "text": modal_title,
+            },
+            "blocks": modal_blocks,
+            "private_metadata": f"{channel_id}@@{selected_category}",
+        }
+    else:
+        updated_modal = {
+            "type": "modal",
+            "callback_id": "slash_input",
+            "title": {
+                "type": "plain_text",
+                "text": modal_title,
+            },
+            "submit": {"type": "plain_text", "text": "Submit"},
+            "close": {"type": "plain_text", "text": "Cancel"},
+            "blocks": modal_blocks,
+            "private_metadata": f"{channel_id}@@{user_input}",
+        }
 
     try:
         client.views_update(view_id=body["view"]["id"], view=updated_modal)
@@ -788,6 +823,161 @@ def handle_category_selection(ack, body, client):
             f"Error updating modal: {str(e)} | Response: {e.response['error']}"
         )
 
+
+@app.action("kakak_siaga_bantuan_radio")
+def handle_kakak_siaga_bantuan_radio(ack, body, client):
+    ack()
+    selected = body["actions"][0]["selected_option"]["value"]
+    user_id = body["user"]["id"]
+    view_id = body["view"]["id"]
+    private_metadata = body["view"]["private_metadata"]
+
+    if selected == "No":
+        # Jika No, kirim pesan dan tutup modal
+        client.chat_postMessage(
+            channel=user_id,
+            text="Kami sarankan untuk diarahkan dulu ya ke tombol bantuan :pray:"
+        )
+        client.views_update(
+            view_id=view_id,
+            view={
+                "type": "modal",
+                "title": {"type": "plain_text", "text": "Kakak Siaga"},
+                "blocks": [
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "Terima Kasih! Silahkan arahkan hubungi Kakak Siaga atau klik tombol Bantuan terlebih dahulu.",
+                        },
+                    }
+                ],
+                "close": {"type": "plain_text", "text": "Close"},
+            }
+        )
+    else:
+        # Jika Yes, lanjut ke form kedua
+        modal_blocks = [
+            {
+                "type": "input",
+                "block_id": "user_id_block",
+                "label": {"type": "plain_text", "text": "User ID"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "user_id_action",
+                    "placeholder": {"type": "plain_text", "text": "Masukkan User ID murid"},
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "nama_murid_block",
+                "label": {"type": "plain_text", "text": "Nama Murid"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "nama_murid_action",
+                    "placeholder": {"type": "plain_text", "text": "Masukkan nama murid"},
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "grade_block",
+                "label": {"type": "plain_text", "text": "Grade"},
+                "element": {
+                    "type": "number_input",
+                    "action_id": "grade_action",
+                    "is_decimal_allowed": False,
+                },
+            },
+            {
+                "type": "input",
+                "block_id": "isu_murid_block",
+                "label": {"type": "plain_text", "text": "Isu yang dialami murid"},
+                "element": {
+                    "type": "plain_text_input",
+                    "action_id": "isu_murid_action",
+                    "multiline": True,
+                    "placeholder": {"type": "plain_text", "text": "Jelaskan isu murid"},
+                },
+            },
+            {
+                "type": "input",
+                "optional": True,
+                "block_id": "file_upload_block",
+                "label": {"type": "plain_text", "text": "File Upload"},
+                "element": {
+                    "type": "file_input",
+                    "action_id": "file_input_action",
+                    "filetypes": ["jpg", "png"],
+                    "max_files": 5,
+                },
+            },
+        ]
+        client.views_update(
+            view_id=view_id,
+            view={
+                "type": "modal",
+                "callback_id": "kakak_siaga_form",
+                "title": {"type": "plain_text", "text": "Form Kakak Siaga"},
+                "submit": {"type": "plain_text", "text": "Submit"},
+                "close": {"type": "plain_text", "text": "Cancel"},
+                "blocks": modal_blocks,
+                "private_metadata": private_metadata,
+            }
+        )
+
+import uuid
+
+@app.view("kakak_siaga_form")
+def handle_kakak_siaga_form_submission(ack, body, view, client):
+    ack()
+    submitter_id = body["user"]["id"]
+    state = view["state"]["values"]
+    user_id = state["user_id_block"]["user_id_action"]["value"]
+    nama_murid = state["nama_murid_block"]["nama_murid_action"]["value"]
+    grade = state["grade_block"]["grade_action"]["value"]
+    isu_murid = state["isu_murid_block"]["isu_murid_action"]["value"]
+    files = (
+        state.get("file_upload_block", {})
+        .get("file_input_action", {})
+        .get("files", [])
+    )
+    timestamp_utc = datetime.now(timezone.utc)
+    timestamp_jakarta = convert_utc_to_jakarta(timestamp_utc)
+
+    # Generate unique ID
+    kakak_siaga_id = str(uuid.uuid4())
+
+    # 1. Simpan ke Google Sheet
+    try:
+        sheet_manager.init_kakak_siaga_row(
+            kakak_siaga_id,  # tambahkan ID di sini
+            submitter_id,
+            user_id,
+            nama_murid,
+            grade,
+            isu_murid,
+            json.dumps(files),
+            timestamp_jakarta,
+        )
+    except Exception as e:
+        logging.error(f"Failed to write Kakak Siaga to sheet: {str(e)}")
+
+    # 2. Kirim info ke channel ops_cn
+    try:
+        result = client.chat_postMessage(
+            channel=testing_cn,
+            text=f"Halo <@Kakak-siaga>,\n"
+             f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala terkait tiket dengan ID: {kakak_siaga_id}. Berikut detailnya:\n"
+                f"UserID: {user_id}\n"
+                f"Nama Murid: {nama_murid}\n"
+                f"Isu: {isu_murid}\n"
+                f"Waktu: {timestamp_jakarta}\n"
+                f"Gambar tertera pada thread ini.",
+        )
+        if files and result["ok"]:
+            inserting_imgs_thread(client, testing_cn, result["ts"], files)
+    except Exception as e:
+        logging.error(f"Failed to send Kakak Siaga info to channel: {str(e)}")
 
 @app.action("generate_slot_list")
 def handle_generate_slot_list(ack, body, client):

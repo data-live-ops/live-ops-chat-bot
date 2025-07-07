@@ -23,6 +23,7 @@ class SheetManager:
             self.slot_data = client.open_by_key(sheet_key).worksheet("slot_data")
             self.emergency = client.open_by_key(sheet_key).worksheet("emergency")
             self.it_helpdesk = client.open_by_key(sheet_key).worksheet("it_helpdesk")
+            self.kakak_siaga = client.open_by_key(sheet_key).worksheet("kakak_siaga")
         except Exception as e:
             logging.error(f"Failed to initialize SheetManager: {str(e)}")
 
@@ -322,3 +323,28 @@ class SheetManager:
             "rejection_reason": 13,
             "history_chat": 14,
         }
+
+    def init_kakak_siaga_row(
+            self, 
+            kakak_siaga_id, 
+            submitter_id,
+            user_id, 
+            nama_murid, 
+            grade, 
+            isu_murid, 
+            files, 
+            timestamp
+    ):
+        try:
+            self.kakak_siaga.append_row([
+                kakak_siaga_id,  # ID sebagai kolom pertama
+                submitter_id,
+                user_id,
+                nama_murid,
+                grade,
+                isu_murid,
+                files,
+                str(timestamp)
+            ])
+        except Exception as e:
+            logging.error(f"Failed to append Kakak Siaga row: {str(e)}")
