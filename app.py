@@ -965,9 +965,9 @@ def handle_kakak_siaga_form_submission(ack, body, view, client):
     # 2. Kirim info ke channel ops_cn
     try:
         result = client.chat_postMessage(
-            channel=testing_cn,
+            channel=reflected_cn,
             text=f"Halo <@Kakak-siaga>,\n"
-             f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala terkait tiket dengan ID: {kakak_siaga_id}. Berikut detailnya:\n"
+             f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: {kakak_siaga_id}. Berikut detailnya:\n"
                 f"UserID: {user_id}\n"
                 f"Nama Murid: {nama_murid}\n"
                 f"Isu: {isu_murid}\n"
@@ -975,7 +975,7 @@ def handle_kakak_siaga_form_submission(ack, body, view, client):
                 f"Gambar tertera pada thread ini.",
         )
         if files and result["ok"]:
-            inserting_imgs_thread(client, testing_cn, result["ts"], files)
+            inserting_imgs_thread(client, reflected_cn, result["ts"], files)
     except Exception as e:
         logging.error(f"Failed to send Kakak Siaga info to channel: {str(e)}")
 
