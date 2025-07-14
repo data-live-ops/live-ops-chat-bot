@@ -325,26 +325,28 @@ class SheetManager:
         }
 
     def init_kakak_siaga_row(
-            self, 
-            kakak_siaga_id, 
-            submitter_id,
-            user_id, 
-            nama_murid, 
-            grade, 
-            isu_murid, 
-            files, 
-            timestamp
+        self,
+        kakak_siaga_id,
+        submitter_id,
+        user_id,
+        nama_murid,
+        grade,
+        isu_murid,
+        files,
+        timestamp,
     ):
         try:
-            self.kakak_siaga.append_row([
-                kakak_siaga_id,  # ID sebagai kolom pertama
-                submitter_id,
-                user_id,
-                nama_murid,
-                grade,
-                isu_murid,
-                files,
-                str(timestamp)
-            ])
+            self.kakak_siaga.append_row(
+                [
+                    kakak_siaga_id,  # ID sebagai kolom pertama
+                    submitter_id,
+                    user_id,
+                    nama_murid,
+                    grade,
+                    isu_murid,
+                    files,
+                    str(timestamp),
+                ]
+            )
         except Exception as e:
             logging.error(f"Failed to append Kakak Siaga row: {str(e)}")

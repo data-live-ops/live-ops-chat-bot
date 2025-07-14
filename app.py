@@ -31,10 +31,17 @@ creds_dict = {
 app = App(token=os.getenv("SLACK_BOT_TOKEN"))
 sheet_manager = SheetManager(creds_dict, "1dPXiGBN2dDyyQ9TnO6Hi8cQtmbkFBU4O7sI5ztbXT90")
 
-emergency_reflected_cn = "C056S606NGM"
-ops_cn = "C079J897A49"
-reflected_cn = "C032B89UK36"
-piket_reflected_cn = "C056S606NGM"
+# emergency_reflected_cn = "C056S606NGM"
+# ops_cn = "C079J897A49"
+# reflected_cn = "C032B89UK36"
+# piket_reflected_cn = "C056S606NGM"
+# helpdesk_cn = "C081NA747D0"
+# helpdesk_support_id = "U08NTAUVD2P"
+# testing_cn = "C0719R3NQ91"
+emergency_reflected_cn = "C047HN4ABD5"
+ops_cn = "C047HN4ABD5"
+reflected_cn = "C047HN4ABD5"
+piket_reflected_cn = "C047HN4ABD5"
 helpdesk_cn = "C081NA747D0"
 helpdesk_support_id = "U08NTAUVD2P"
 testing_cn = "C0719R3NQ91"
@@ -494,6 +501,7 @@ def handle_category_selection(ack, body, client):
     )
     selected_category = body["actions"][0].get("value", user_input)
     trigger_id = body["trigger_id"]
+
     if selected_category == "Piket":
         modal_blocks = [
             {
@@ -786,7 +794,6 @@ def handle_category_selection(ack, body, client):
 
     modal_titles = {
         "IT Helpdesk": "Submit a Helpdesk Ticket",
-        "Kakak Siaga": "Kakak Siaga Assistance",
     }
 
     modal_title = modal_titles.get(selected_category, "Think Wisely!")
@@ -797,24 +804,24 @@ def handle_category_selection(ack, body, client):
             "callback_id": "slash_input",
             "title": {
                 "type": "plain_text",
-                "text": modal_title,
+                "text": "Kakak Siaga Assistance",
             },
             "blocks": modal_blocks,
             "private_metadata": f"{channel_id}@@{selected_category}",
         }
-    else:
-        updated_modal = {
-            "type": "modal",
-            "callback_id": "slash_input",
-            "title": {
-                "type": "plain_text",
-                "text": modal_title,
-            },
-            "submit": {"type": "plain_text", "text": "Submit"},
-            "close": {"type": "plain_text", "text": "Cancel"},
-            "blocks": modal_blocks,
-            "private_metadata": f"{channel_id}@@{user_input}",
-        }
+
+    updated_modal = {
+        "type": "modal",
+        "callback_id": "slash_input",
+        "title": {
+            "type": "plain_text",
+            "text": modal_title,
+        },
+        "submit": {"type": "plain_text", "text": "Submit"},
+        "close": {"type": "plain_text", "text": "Cancel"},
+        "blocks": modal_blocks,
+        "private_metadata": f"{channel_id}@@{selected_category}",
+    }
 
     try:
         client.views_update(view_id=body["view"]["id"], view=updated_modal)
@@ -967,21 +974,32 @@ def handle_kakak_siaga_form_submission(ack, body, view, client):
         )
     except Exception as e:
         logging.error(f"Failed to write Kakak Siaga to sheet: {str(e)}")
-
-    # 2. Kirim info ke channel ops_cn
+    # dikirim ke kakak-siaga-ops
     try:
-        result = client.chat_postMessage(
-            channel=reflected_cn,
-            text=f"Halo <@Kakak-siaga>,\n"
-            f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: {kakak_siaga_id}. Berikut detailnya:\n"
-            f"UserID: {user_id}\n"
-            f"Nama Murid: {nama_murid}\n"
-            f"Isu: {isu_murid}\n"
-            f"Waktu: {timestamp_jakarta}\n"
-            f"Gambar tertera pada thread ini.",
-        )
-        if files and result["ok"]:
-            inserting_imgs_thread(client, reflected_cn, result["ts"], files)
+        if files:
+            result = client.chat_postMessage(
+                channel=reflected_cn,
+                text=f"Halo <@Kakak-siaga>,\n"
+                f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: `{kakak_siaga_id}`.\nBerikut detailnya:\n"
+                f"*User ID*: {user_id}\n"
+                f"*Nama Murid*: {nama_murid}\n"
+                f"*Isu*: ```{isu_murid}```\n"
+                f"*Waktu*: `{timestamp_jakarta}`\n"
+                f"_Gambar tertera pada thread ini._",
+            )
+            if result["ok"]:
+                inserting_imgs_thread(client, reflected_cn, result["ts"], files)
+        else:
+            result = client.chat_postMessage(
+                channel=reflected_cn,
+                text=f"Halo <@Kakak-siaga>,\n"
+                f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: `{kakak_siaga_id}`.\nBerikut detailnya:\n"
+                f"*User ID*: {user_id}\n"
+                f"*Nama Murid*: {nama_murid}\n"
+                f"*Isu*: ```{isu_murid}```\n"
+                f"*Waktu*: `{timestamp_jakarta}`\n",
+            )
+
     except Exception as e:
         logging.error(f"Failed to send Kakak Siaga info to channel: {str(e)}")
 
@@ -1526,6 +1544,8 @@ def send_the_user_input(ack, body, client, say, view):
     unique_id = str(uuid.uuid4())
     timestamp_utc = datetime.now(timezone.utc)
     timestamp_jakarta = convert_utc_to_jakarta(timestamp_utc)
+
+    print(f"cek category: {category}")
 
     if category == "Piket":
         class_date = view["state"]["values"]["date_block"]["date_picker_action"][
