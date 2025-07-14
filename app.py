@@ -786,7 +786,7 @@ def handle_category_selection(ack, body, client):
 
     modal_titles = {
         "IT Helpdesk": "Submit a Helpdesk Ticket",
-        "Kakak Siaga": "Kakak Siaga Assistance"
+        "Kakak Siaga": "Kakak Siaga Assistance",
     }
 
     modal_title = modal_titles.get(selected_category, "Think Wisely!")
@@ -836,7 +836,7 @@ def handle_kakak_siaga_bantuan_radio(ack, body, client):
         # Jika No, kirim pesan dan tutup modal
         client.chat_postMessage(
             channel=user_id,
-            text="Kami sarankan untuk diarahkan dulu ya ke tombol bantuan :pray:"
+            text="Kami sarankan untuk diarahkan dulu ya ke tombol bantuan :pray:",
         )
         client.views_update(
             view_id=view_id,
@@ -853,7 +853,7 @@ def handle_kakak_siaga_bantuan_radio(ack, body, client):
                     }
                 ],
                 "close": {"type": "plain_text", "text": "Close"},
-            }
+            },
         )
     else:
         # Jika Yes, lanjut ke form kedua
@@ -865,7 +865,10 @@ def handle_kakak_siaga_bantuan_radio(ack, body, client):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "user_id_action",
-                    "placeholder": {"type": "plain_text", "text": "Masukkan User ID murid"},
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Masukkan User ID murid",
+                    },
                 },
             },
             {
@@ -875,7 +878,10 @@ def handle_kakak_siaga_bantuan_radio(ack, body, client):
                 "element": {
                     "type": "plain_text_input",
                     "action_id": "nama_murid_action",
-                    "placeholder": {"type": "plain_text", "text": "Masukkan nama murid"},
+                    "placeholder": {
+                        "type": "plain_text",
+                        "text": "Masukkan nama murid",
+                    },
                 },
             },
             {
@@ -922,10 +928,12 @@ def handle_kakak_siaga_bantuan_radio(ack, body, client):
                 "close": {"type": "plain_text", "text": "Cancel"},
                 "blocks": modal_blocks,
                 "private_metadata": private_metadata,
-            }
+            },
         )
 
+
 import uuid
+
 
 @app.view("kakak_siaga_form")
 def handle_kakak_siaga_form_submission(ack, body, view, client):
@@ -937,9 +945,7 @@ def handle_kakak_siaga_form_submission(ack, body, view, client):
     grade = state["grade_block"]["grade_action"]["value"]
     isu_murid = state["isu_murid_block"]["isu_murid_action"]["value"]
     files = (
-        state.get("file_upload_block", {})
-        .get("file_input_action", {})
-        .get("files", [])
+        state.get("file_upload_block", {}).get("file_input_action", {}).get("files", [])
     )
     timestamp_utc = datetime.now(timezone.utc)
     timestamp_jakarta = convert_utc_to_jakarta(timestamp_utc)
@@ -967,17 +973,18 @@ def handle_kakak_siaga_form_submission(ack, body, view, client):
         result = client.chat_postMessage(
             channel=reflected_cn,
             text=f"Halo <@Kakak-siaga>,\n"
-             f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: {kakak_siaga_id}. Berikut detailnya:\n"
-                f"UserID: {user_id}\n"
-                f"Nama Murid: {nama_murid}\n"
-                f"Isu: {isu_murid}\n"
-                f"Waktu: {timestamp_jakarta}\n"
-                f"Gambar tertera pada thread ini.",
+            f"mohon bantuannya, ada murid dari kelas {grade} (<@{submitter_id}>) yang mengalami kendala dengan Ticket-ID: {kakak_siaga_id}. Berikut detailnya:\n"
+            f"UserID: {user_id}\n"
+            f"Nama Murid: {nama_murid}\n"
+            f"Isu: {isu_murid}\n"
+            f"Waktu: {timestamp_jakarta}\n"
+            f"Gambar tertera pada thread ini.",
         )
         if files and result["ok"]:
             inserting_imgs_thread(client, reflected_cn, result["ts"], files)
     except Exception as e:
         logging.error(f"Failed to send Kakak Siaga info to channel: {str(e)}")
+
 
 @app.action("generate_slot_list")
 def handle_generate_slot_list(ack, body, client):
